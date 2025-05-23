@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Raindrops Billing</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f4f4f9;
+      color: #333;
+    }
+    h2 {
+      text-align: center;
+      color: #2c3e50;
+    }
+    .container {
+      max-width: 900px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    table {
+      width: 100%;
+      margin-top: 20px;
+      border-collapse: collapse;
+    }
+    table, th, td {
+      border: 1px solid #ccc;
+    }
+    th, td {
+      padding: 10px;
+      text-align: center;
+    }
+    input[type="text"], input[type="number"], input[type="file"] {
+      width: 100%;
+      padding: 8px;
+      margin: 5px 0;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    button {
+      background: #3498db;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #2980b9;
+    }
+    .total-section, .customer-section {
+      text-align: right;
+      margin-top: 20px;
+    }
+    .flex-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .flex-row label {
+      flex: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Raindrops Novelties - Billing</h2>
+    <div class="flex-row customer-section">
+      <label>Customer Name: <input type="text" id="customerName" /></label>
+      <label>Invoice No: <input type="text" id="invoiceNo" /></label>
+      <label>Date: <input type="text" id="date" readonly /></label>
+    </div>
+
+    <div class="flex-row">
+      <label>Product Name: <input type="text" id="productName" /></label>
+      <label>Selling Price: <input type="number" id="price" /></label>
+      <label>Quantity: <input type="number" id="quantity" value="1" /></label>
+      <button onclick="addProduct()">Add Product</button>
+    </div>
+
+    <div style="margin-top: 10px">
+      <label>Upload Inventory CSV: <input type="file" id="inventoryUpload" accept=".csv" onchange="loadInventory(event)" /></label>
+      <p style="font-size: 0.9em; color: #666;">Format: Product Name, Purchase Price, Selling Price, Quantity</p>
+    </div>
+
+    <table id="billTable">
+      <thead>
+        <tr>
+          <th>Product</th>
+          <th>Selling Price</th>
+          <th>Qty</th>
+          <th>Total</th>
+          <th>Remove</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <div class="total-section">
+      <p>Subtotal: ₹<span id="subtotal">0</span></p>
+      <p>Discount (%): <input type="number" id="discount" value="0" oninput="calculateTotal()" /></p>
+      <p>Tax (%): <input type="number" id="tax" value="0" oninput="calculateTotal()" /></p>
+      <h3>Grand Total: ₹<span id="grandTotal">0</span></h3>
+      <button onclick="window.print()">Print Bill</button>
+    </div>
+  </div>
+
+  <script>
+    let subtotal = 0;
+
+    document.getElementById("date").value = new Date().toLocaleDateString();
+
+    function addProduct() {
+      const name = document.getElementById("productName").value;
+      const price = parseFloat(document.getElementById("price").value);
+      const qty = parseInt(document.getElementById("quantity").value);
+
+      if (!name || !price || !qty) return alert("Please enter all fields");
+
+      const total = price * qty;
+      subtotal += total;
+
+      const table = document.getElementById("billTable").getElementsByTagName("tbody")[0];
+      const row = table.insertRow();
+
+      row.innerHTML = `
+        <td>${name}</td>
+        <td>₹${price.toFixed(2)}</td>
+        <td>${qty}</td>
+        <td>₹${total.toFixed(2)}</td>
+        <td><button onclick="removeRow(this, ${total})">Remove</button></td>
+      `;
+
+      calculateTotal();
+      document.getElementById("productName").value = "";
+      document.getElementById("price").value = "";
+      document.getElementById("quantity").value = 1;
+    }
+
+    function removeRow(button, amount) {
+      const row = button.parentElement.parentElement;
+      row.remove();
+      subtotal -= amount;
+      calculateTotal();
+    }
+
+    function calculateTotal() {
+      const discount = parseFloat(document.getElementById("discount").value) || 0;
+      const tax = parseFloat(document.getElementById("tax").value) || 0;
+
+      let discounted = subtotal - (subtotal * discount / 100);
+      let grand = discounted + (discounted * tax / 100);
+
+      document.getElementById("subtotal").innerText = subtotal.toFixed(2);
+      document.getElementById("grandTotal").innerText = grand.toFixed(2);
+    }
+
+    function loadInventory(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const lines = e.target.result.split("\n");
+        for (let i = 1; i < lines.length; i++) {
+          const [name, purchasePrice, sellingPrice, quantity] = lines[i].split(",");
+          if (name && sellingPrice && quantity) {
+            document.getElementById("productName").value = name.trim();
+            document.getElementById("price").value = parseFloat(sellingPrice);
+            document.getElementById("quantity").value = parseInt(quantity);
+            addProduct();
+          }
+        }
+      };
+      reader.readAsText(file);
+    }
+  </script>
+</body>
+</html>
